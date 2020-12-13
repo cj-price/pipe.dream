@@ -60,3 +60,36 @@ With =as->=
                    X> = X (apply str (reverse X))))
   ;; => (-> "hellolleh" (as-> X (= X (apply str (reverse X)))))
 #+END_SRC
+
+Of course, you can mix all of these together into one =pipe=
+
+#+BEGIN_SRC clojure
+  (pipe
+   {:stuff (range 4)}
+   |> :stuff
+   _> map inc
+   X> identity {:inc-stuff X})
+#+END_SRC
+
+* Require
+
+Say your running a linter like [[https://github.com/borkdude/clj-kondo][clj-kondo]] and it's telling you that there is an =unresolved symbol=.
+You can fix this by using =:refer= in the ns =:require=. Doing this in Clojure and ClojureScript are a bit different. Below demonstrates how you'd
+do it in each language.
+
+Clojure
+
+#+BEGIN_SRC clojure
+  (ns example.core
+    (:require [pipe.dream.core 
+               :refer [pipe |> _> X> X]]))
+#+END_SRC
+
+ClojureScript
+
+#+BEGIN_SRC clojure
+  (ns example.core
+    (:require [pipe.dream.core
+               :refer [|> _> X> X]
+               :refer-macros [pipe]))
+#+END_SRC
