@@ -1,0 +1,62 @@
+#+TITLE: pipe.dream
+#+AUTHOR: C.J. Price
+
+[[https://img.shields.io/clojars/v/pipe.dream.svg]]
+
+Elixir-like pipe =|>= in Clojure(Script) that supports thread-first, thread-last, and =as->=.
+
+* Usage
+Simple example using the =->= equivalent
+
+#+BEGIN_SRC clojure
+  (ns example.core
+    (:require [pipe.dream.core :refer [pipe]]))
+
+  (pipe
+   {:x 1}
+   |> update :x inc
+   |> update :x str
+   |> assoc :y "3")
+  ;; => {:x "2", :y "3"}
+   
+  (macroexpand-1 '(pipe
+                   {:x 1}
+                   |> update :x inc
+                   |> update :x str
+                   |> assoc :y "3"))
+  ;; => (-> {:x 1} (update :x inc) (update :x str) (assoc :y "3"))
+#+END_SRC
+
+Simple example using the =->>= equivalent
+
+#+BEGIN_SRC clojure
+  (pipe
+   (range 10)
+   _> map inc
+   _> reduce +)
+  ;; => 55
+   
+  (macroexpand-1 '(pipe
+                   (range 10)
+                   _> map inc
+                   _> reduce +))
+  ;; => (-> (range 10) (as-> X (map inc X)) (as-> X (reduce + X)))
+   
+  ;; Same as
+  (->> (range 10) (map inc) (reduce +))
+  ;; => 55
+#+END_SRC
+
+With =as->=
+
+#+BEGIN_SRC clojure
+  (pipe
+   "hellolleh"
+   X> = X (apply str (reverse X)))
+  ;; => true
+  
+  (macroexpand-1 '(pipe
+                   "hellolleh"
+                   X> = X (apply str (reverse X))))
+  ;; => (-> "hellolleh" (as-> X (= X (apply str (reverse X)))))
+#+END_SRC
