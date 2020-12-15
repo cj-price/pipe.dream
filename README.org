@@ -74,7 +74,7 @@ Of course, you can mix all of these together into one =pipe=
 
 * Require
 
-Say your running a linter like [[https://github.com/borkdude/clj-kondo][clj-kondo]] and it's telling you that there is an =unresolved symbol=.
+Say you're running a linter like [[https://github.com/borkdude/clj-kondo][clj-kondo]] and it's telling you that there is an =unresolved symbol=.
 You can fix this by using =:refer= in the ns =:require=. Doing this in Clojure and ClojureScript is a bit different. Below demonstrates how you'd
 do it in each language.
 
