@@ -1,14 +1,14 @@
 (ns pipe.dream.core-test
   (:require
-   #?(:clj  [clojure.test
-             :refer [deftest is testing]]
+   #?(:clj [clojure.test
+            :refer [deftest is testing]]
       :cljs [cljs.test
              :refer-macros [deftest is testing]])
    #?(:clj  [pipe.dream.core
-             :refer [pipe |> _> X> X]]
+             :refer [defpipe pipe |> _> X> X >>]]
       :cljs [pipe.dream.core
-             :refer [|> _> X> X]
-             :refer-macros [pipe]])))
+             :refer [|> _> X> X >>]
+             :refer-macros [defpipe pipe]])))
 
 
 
@@ -74,3 +74,46 @@
               |> reverse
               _> map (partial reduce *)
               _> reduce +))))))
+
+
+(defn- throw-err [msg]
+  #?(:clj  (throw (Exception. msg))
+     :cljs (throw (js/Error. msg))))
+
+(defn- test-interceptor [result pred]
+      (if (pred result)
+        result
+        (throw-err (str "Failed with result: " result))))
+
+(deftest defpipe-tests
+  (testing "Basic defpipe"
+
+    (defpipe test-pipe
+      |> assoc :a 1
+      |> assoc :b 2
+      |> assoc :c 3)
+
+    (is (= {:a 1 :b 2 :c 3}
+           (test-pipe {}))))
+
+  (testing "defpipe with interceptor"
+    (defpipe interceptor-pipe
+      :interceptor test-interceptor
+               >> int?
+      |> inc   >> (partial = 2)
+      |> * 2   >> (partial = 4)
+      |> range >> seq?)
+
+    (is (= '(0 1 2 3)
+           (interceptor-pipe 1))))
+
+  (testing "defpipe with interceptor that fails"
+    (defpipe interceptor-fail-pipe
+      :interceptor test-interceptor
+      |> str
+      |> first >> (partial = \b))
+
+    (is (try
+          (interceptor-fail-pipe (range 97 123))
+          (catch #?(:clj Exception :cljs js/Object) _
+            true)))))
