@@ -45,10 +45,10 @@
 
   (testing "as-> equivalent"
     (testing "Test to see if `hellolleh` is a palidrome"
-      (is (= true
-             (pipe
-              "hellolleh"
-              X> = X (apply str (reverse X)))))))
+      (is (true?
+           (pipe
+            "hellolleh"
+            X> = X (apply str (reverse X)))))))
 
   (testing "kitchen sink"
     (testing "Some random math"
@@ -87,7 +87,6 @@
 
 (deftest defpipe-tests
   (testing "Basic defpipe"
-
     (defpipe test-pipe
       |> assoc :a 1
       |> assoc :b 2
@@ -113,7 +112,13 @@
       |> str
       |> first >> (partial = \b))
 
-    (is (try
-          (interceptor-fail-pipe (range 97 123))
-          (catch #?(:clj Exception :cljs js/Object) _
-            true)))))
+    (is (true? (try
+                 (interceptor-fail-pipe (range 97 123))
+                 (catch #?(:clj Exception :cljs js/Object) _
+                   true)))))
+
+  (testing "defpipe docstring"
+    (defpipe pipe-with-doc
+      :doc "this is the docstring")
+    (is (= "this is the docstring"
+           (:doc (meta #'pipe-with-doc))))))

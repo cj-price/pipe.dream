@@ -12,24 +12,6 @@
 (def >> '>>)
 
 
-#_(def custom-op-fn:atom (atom nil))
-
-#_(defn set-custom-op-fn!
-  "Given a function, when the `>>` operator is used, call the function on the
-  return value. The first argument to the function is the previous statement's
-  value. Whatever is between the next pipe op and the previous are passed as
-  arguments.
-
-  Ideally, you would use the provided function to throw an error to be handled
-  at the edges of your program."
-  [f]
-  (reset! custom-op-fn:atom f))
-
-#_(defn handle-type-fn [result & body]
-  (when-let [f @custom-op-fn:atom]
-    (apply f (conj body result)))
-  result)
-
 
 ;; MACRO HELPERS
 ;;--------------
