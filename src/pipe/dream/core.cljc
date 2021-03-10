@@ -102,9 +102,11 @@
   "Wraps the `pipe` macro in a `defn`, where the argument is passed as the first
   argument to the `pipe` macro.
 
-  There are two options that should be supplied after the name of the `pipe`:
+  Options that can be supplied after the name of the `pipe`:
   1) `:doc` adds a docstring to the function
   2) `:interceptor` function that allows the use of the `>>` operator
+  3) `:let` destructure the argument to the pipe
+  4) `:arg` sets the first argument to the pipe. The function produced won't expect an argument
 
   The `>>` operator calls the function supplied to the interceptor, where the
   first parameter is the result of the previous statement. Any items between the
@@ -112,9 +114,24 @@
   interceptor function. Ideally, this can be used to spec results and handle
   errors."
   [name & args]
-  (let [{:keys [body doc interceptor]} (opt-map args)
+  (let [{:keys [arg body doc interceptor let]} (opt-map args)
         doc (doc-str doc name)]
     (list 'defn name
           doc
-          '[in]
-          (handle-pipe {:interceptor interceptor} (conj body 'in)))))
+          (if arg '[] '[in])
+          (cond
+
+            (and let arg)
+            (list 'let [let arg]
+                  (handle-pipe {:interceptor interceptor} (conj body arg)))
+
+
+            let
+            (list 'let [let 'in]
+                  (handle-pipe {:interceptor interceptor} (conj body 'in)))
+
+            arg
+            (handle-pipe {:interceptor interceptor} (conj body arg))
+
+            :else
+            (handle-pipe {:interceptor interceptor} (conj body 'in))))))

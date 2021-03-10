@@ -121,4 +121,20 @@
     (defpipe pipe-with-doc
       :doc "this is the docstring")
     (is (= "this is the docstring"
-           (:doc (meta #'pipe-with-doc))))))
+           (:doc (meta #'pipe-with-doc)))))
+
+  (testing "defpipe arg"
+    (defpipe pipe-with-arg
+      :arg (constantly 1)
+      |> apply '())
+
+    (is (= 1
+           (pipe-with-arg)))
+
+    (testing "defpipe let"
+      (defpipe pipe-with-let
+        :let {:keys [x y]}
+        |> assoc :x+y (+ x y))
+
+      (is (= {:x 1 :y 2 :x+y 3}
+             (pipe-with-let {:x 1 :y 2}))))))
