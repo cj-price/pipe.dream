@@ -120,13 +120,16 @@ Multi-arity pipes are also a thing.
   :let [v1 v2 v3]
   :arg v1
   |> + v2 v3)
+
+(add-stuff 1 2 3)
+;; => 6
 #+END_SRC
 
 ** =:doc=
 
 Adds a doc string to the underlying =defn=.
 
-For more examples, view the tests in the =test/pipe/dream.cljc/= file.
+For more examples, view the tests in the =test/pipe/dream/test.cljc= file.
 
 * Require
 
