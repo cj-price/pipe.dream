@@ -1,15 +1,10 @@
-(ns pipe.dream.core)
-
-
+(ns pipe.dream)
 
 ;; PIPE OPERATORS
 ;;---------------
 
 (def |> '|>)
 (def _> '_>)
-(def X> 'X>)
-(def X 'X)
-(def >> '>>)
 
 
 
@@ -20,7 +15,7 @@
   "Given parsed pipe syntax, place previous return values in their designated
   places. Since `handle-pipe` uses `->`, `_>` and `X>` must be altered to work
   within a thread-first thread."
-  [{:keys [interceptor]} [[op] body]]
+  [_ [[op] body]]
   (condp = op
     '|> body
     '_> (-> body
@@ -28,27 +23,18 @@
             (conj 'X)
             seq
             list
-            (into (list 'X 'as->)))
-    'X> (-> body
-            seq
-            list
-            (into (list 'X 'as->)))
-    '>> (if interceptor
-          (conj body interceptor)
-          (let [err "Found `>>` when an interceptor wasn't provided."]
-            #?(:clj  (throw (Exception. err))
-               :cljs (throw (js/Error. err)))))))
+            (into (list 'X 'as->)))))
 
 
 (defn- handle-pipe
   "Parses pipe syntax into a `->`."
-  [{:keys [interceptor]} body]
+  [_ body]
   (let [first-arg (first body)]
     (->> body
-         (partition-by (partial #{'|> '_> 'X> '>>}))
+         (partition-by (partial #{'|> '_>}))
          rest
          (partition 2)
-         (map (partial handle-op {:interceptor interceptor}))
+         (map (partial handle-op nil))
          (#(-> %
                (conj first-arg)
                (conj '->))))))
@@ -75,6 +61,12 @@
     (str name " does not have a docstring. Add one with `:doc`.")))
 
 
+(defn handle-multiple-inputs
+  "Allows for multi-arity pipes."
+  [in]
+  (if (> (count in) 1) in (first in)))
+
+
 
 ;; MACROS
 ;;-------
@@ -82,13 +74,12 @@
 (defmacro pipe
   "An alternative to clojure's threading macros. Clojure expressions should be
   unwrapped when passed to this macro. Depending on the operator used, the
-  placement of the previous statement's return is passed to the desired index
+  placement of the previous statement's return is passed to the desired location
   of the current statement.
 
   This namespace provides these valid operators:
-  1) `|>` equivalent to `->`
-  2) `_>` equivalent to `->>`
-  3) `X>` like `as->` where the value is bound to `X`
+  1) `|>` equivalent to `->`.
+  2) `_>` equivalent to `->>`.
 
   Example:
   (pipe {:x 1} |> update :x inc |> assoc :y 3 |> vals _> reduce +)
@@ -97,41 +88,33 @@
   (handle-pipe {} body))
 
 
-
 (defmacro defpipe
   "Wraps the `pipe` macro in a `defn`, where the argument is passed as the first
   argument to the `pipe` macro.
 
   Options that can be supplied after the name of the `pipe`:
-  1) `:doc` adds a docstring to the function
-  2) `:interceptor` function that allows the use of the `>>` operator
-  3) `:let` destructure the argument to the pipe
-  4) `:arg` sets the first argument to the pipe. The function produced won't expect an argument
-
-  The `>>` operator calls the function supplied to the interceptor, where the
-  first parameter is the result of the previous statement. Any items between the
-  `>>` operator and the next operator (or end of the pipe) will be passed to the
-  interceptor function. Ideally, this can be used to spec results and handle
-  errors."
+  1) `:doc` adds a docstring to the function.
+  2) `:let` destructure the argument to the pipe.
+  3) `:arg` sets the first argument to the pipe."
   [name & args]
-  (let [{:keys [arg body doc interceptor let]} (opt-map args)
+  (let [{:keys [arg body doc let]} (opt-map args)
         doc (doc-str doc name)]
     (list 'defn name
           doc
-          (if arg '[] '[in])
+          '[& in]
           (cond
 
             (and let arg)
-            (list 'let [let arg]
-                  (handle-pipe {:interceptor interceptor} (conj body arg)))
-
+            (list 'let [let (list 'pipe.dream/handle-multiple-inputs 'in)]
+                  (handle-pipe {} (conj body arg)))
 
             let
-            (list 'let [let 'in]
-                  (handle-pipe {:interceptor interceptor} (conj body 'in)))
+            (list 'let [[let] 'in ['in] 'in]
+                  (handle-pipe {} (conj body 'in)))
 
             arg
-            (handle-pipe {:interceptor interceptor} (conj body arg))
+            (handle-pipe {} (conj body arg))
 
             :else
-            (handle-pipe {:interceptor interceptor} (conj body 'in))))))
+            (list 'let [['in] 'in]
+                  (handle-pipe {} (conj body 'in)))))))

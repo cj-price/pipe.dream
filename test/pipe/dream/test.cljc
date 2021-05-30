@@ -1,13 +1,13 @@
-(ns pipe.dream.core-test
+(ns pipe.dream.test
   (:require
    #?(:clj [clojure.test
             :refer [deftest is testing]]
       :cljs [cljs.test
              :refer-macros [deftest is testing]])
-   #?(:clj  [pipe.dream.core
-             :refer [defpipe pipe |> _> X> X >>]]
-      :cljs [pipe.dream.core
-             :refer [|> _> X> X >>]
+   #?(:clj  [pipe.dream
+             :refer [defpipe pipe |> _>]]
+      :cljs [pipe.dream
+             :refer [|> _>]
              :refer-macros [defpipe pipe]])))
 
 
@@ -43,13 +43,6 @@
               _> filter odd?
               _> reduce +)))))
 
-  (testing "as-> equivalent"
-    (testing "Test to see if `hellolleh` is a palidrome"
-      (is (true?
-           (pipe
-            "hellolleh"
-            X> = X (apply str (reverse X)))))))
-
   (testing "kitchen sink"
     (testing "Some random math"
       (is (= 412
@@ -57,10 +50,10 @@
               "random math"
               |> seq
               _> map int
-              X> into X (rest X)
+              |> #(into % (rest %))
               |> constantly
-              X> list (first (X)) (second (X)) (nth (X) 2)
-              _> (fn [[x1 x2 x3]] (pipe x1 |> + x2 |> - x3))
+              |> #(list (first (%)) (second (%)) (nth (%) 2))
+              |> (fn [[x1 x2 x3]] (pipe x1 |> + x2 |> - x3))
               |> inc
               |> str
               |> seq
@@ -68,7 +61,7 @@
               _> drop 2
               _> take 3
               _> map int
-              _> map #(- % 48)
+              |> (fn [coll] (map #(- % 48) coll))
               |> reverse
               _> map vector (iterate (partial * 10) 1)
               |> reverse
@@ -80,11 +73,6 @@
   #?(:clj  (throw (Exception. msg))
      :cljs (throw (js/Error. msg))))
 
-(defn- test-interceptor [result pred]
-      (if (pred result)
-        result
-        (throw-err (str "Failed with result: " result))))
-
 (deftest defpipe-tests
   (testing "Basic defpipe"
     (defpipe test-pipe
@@ -94,28 +82,6 @@
 
     (is (= {:a 1 :b 2 :c 3}
            (test-pipe {}))))
-
-  (testing "defpipe with interceptor"
-    (defpipe interceptor-pipe
-      :interceptor test-interceptor
-               >> int?
-      |> inc   >> (partial = 2)
-      |> * 2   >> (partial = 4)
-      |> range >> seq?)
-
-    (is (= '(0 1 2 3)
-           (interceptor-pipe 1))))
-
-  (testing "defpipe with interceptor that fails"
-    (defpipe interceptor-fail-pipe
-      :interceptor test-interceptor
-      |> str
-      |> first >> (partial = \b))
-
-    (is (true? (try
-                 (interceptor-fail-pipe (range 97 123))
-                 (catch #?(:clj Exception :cljs js/Object) _
-                   true)))))
 
   (testing "defpipe docstring"
     (defpipe pipe-with-doc
@@ -129,12 +95,30 @@
       |> apply '())
 
     (is (= 1
-           (pipe-with-arg)))
+           (pipe-with-arg))))
 
-    (testing "defpipe let"
-      (defpipe pipe-with-let
-        :let {:keys [x y]}
-        |> assoc :x+y (+ x y))
+  (testing "defpipe let"
+    (defpipe pipe-with-let
+      :let {:keys [x y]}
+      |> assoc :x+y (+ x y))
 
-      (is (= {:x 1 :y 2 :x+y 3}
-             (pipe-with-let {:x 1 :y 2}))))))
+    (is (= {:x 1 :y 2 :x+y 3}
+           (pipe-with-let {:x 1 :y 2}))))
+
+  (testing "defpipe let and arg"
+    (defpipe pipe-with-let-and-arg
+      :let {:keys [x y]}
+      :arg x
+      |> + y)
+
+    (is (= 412
+           (pipe-with-let-and-arg {:x 400 :y 12}))))
+
+  (testing "multi-arity defpipe"
+    (defpipe multi-arity-defpipe
+      :let [v1 v2 v3]
+      :arg v1
+      |> + v2 v3)
+
+    (is (= 6
+         (multi-arity-defpipe 1 2 3)))))

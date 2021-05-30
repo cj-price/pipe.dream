@@ -3,14 +3,14 @@
 
 [[https://img.shields.io/clojars/v/pipe.dream.svg]]
 
-Elixir-like pipe =|>= in Clojure(Script) that supports thread-first, thread-last, and =as->=.
+Elixir-like pipe =|>= in Clojure(Script).
 
 * Usage
 Simple example using the =->= equivalent.
 
 #+BEGIN_SRC clojure
   (ns example.core
-    (:require [pipe.dream.core :refer [pipe]]))
+    (:require [pipe.dream :refer [pipe]]))
 
   (pipe
    {:x 1}
@@ -47,28 +47,14 @@ Simple example using the =->>= equivalent.
   ;; => 55
 #+END_SRC
 
-With =as->=.
-
-#+BEGIN_SRC clojure
-  (pipe
-   "hellolleh"
-   X> = X (apply str (reverse X)))
-  ;; => true
-  
-  (macroexpand-1 '(pipe
-                   "hellolleh"
-                   X> = X (apply str (reverse X))))
-  ;; => (-> "hellolleh" (as-> X (= X (apply str (reverse X)))))
-#+END_SRC
-
-Of course, you can mix all of these together into one =pipe=.
+Of course, you can mix them together into one =pipe=.
 
 #+BEGIN_SRC clojure
   (pipe
    {:stuff (range 4)}
    |> :stuff
    _> map inc
-   X> identity {:inc-stuff X})
+   |> (fn [stuff] {:inc-stuff stuff}))
   ;; => {:inc-stuff (1 2 3 4)}
 #+END_SRC
 
@@ -127,43 +113,39 @@ Top level =let= in the case of destructuring.
 ;; => 6
 #+END_SRC
 
+Multi-arity pipes are also a thing.
+
+#+BEGIN_SRC clojure
+(defipe add-stuff
+  :let [v1 v2 v3]
+  :arg v1
+  |> + v2 v3)
+#+END_SRC
+
 ** =:doc=
 
 Adds a doc string to the underlying =defn=.
 
-** =:interceptor=
-
-Adds a way to handle results in and around pipe operations. To invoke with arguments, use the =>>= operator. Ideally, this would be used for type checking, spec assertions, debugging, etc. Generally, this can be used for any side effect that needs handled at the edges of your program. Although this operator can modify a result from a previous expression, it's discouraged since the other operators are more suited for that purpose.
-
-#+BEGIN_SRC clojure
-(defpipe inc-twice
-  :interceptor some-spec-validator
-         >> ::whole-number
-  |> inc >> ::whole-number
-  |> inc >> ::whole-number)
-#+END_SRC
-
-For more examples, view the tests in the =test/pipe/dream/= directory.
+For more examples, view the tests in the =test/pipe/dream.cljc/= file.
 
 * Require
 
 Say you're running a linter like [[https://github.com/borkdude/clj-kondo][clj-kondo]] and it's telling you that there is an =unresolved symbol=.
-You can fix this by using =:refer= in the ns =:require=. Doing this in Clojure and ClojureScript is a bit different. Below demonstrates how you'd
-do it in each language.
+You can fix this by using =:refer= in the ns =:require=. Doing this in Clojure and ClojureScript is a bit different. Below demonstrates how you'd do it in each language.
 
 Clojure
 
 #+BEGIN_SRC clojure
   (ns example.core
-    (:require [pipe.dream.core 
-               :refer [pipe |> _> X> X >>]]))
+    (:require [pipe.dream
+               :refer [defpipe pipe |> _>]]))
 #+END_SRC
 
 ClojureScript
 
 #+BEGIN_SRC clojure
   (ns example.core
-    (:require [pipe.dream.core
-               :refer [|> _> X> X >>]
-               :refer-macros [pipe]))
+    (:require [pipe.dream
+               :refer [|> _>]
+               :refer-macros [defpipe pipe]))
 #+END_SRC
